@@ -1,10 +1,12 @@
 use ratatui::backend::CrosstermBackend;
+use ratatui::widgets::{Block, Borders};
 use ratatui::Terminal;
 use rzf_async::app::{App, AppResult};
 use rzf_async::event::{Event, EventHandler};
 use rzf_async::handler::handle_key_events;
 use rzf_async::tui::Tui;
 use std::{env, io};
+use tui_textarea::{Input, Key, TextArea};
 
 #[tokio::main]
 async fn main() -> AppResult<()> {
@@ -20,12 +22,16 @@ async fn main() -> AppResult<()> {
     let terminal = Terminal::new(backend)?;
     let events = EventHandler::new(250);
     let mut tui = Tui::new(terminal, events);
+
+    let mut text_area = TextArea::default();
+    text_area.set_block(Block::default().borders(Borders::ALL).title(">"));
     tui.init()?;
 
     // Start the main loop.
     while app.running {
         // Render the user interface.
-        tui.draw(&mut app)?;
+        tui.draw(&mut app, &mut text_area)?;
+
         // Handle events.
         match tui.events.next().await? {
             Event::Tick => app.tick(),

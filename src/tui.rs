@@ -7,6 +7,7 @@ use ratatui::backend::Backend;
 use ratatui::Terminal;
 use std::io;
 use std::panic;
+use tui_textarea::{Input, Key, TextArea};
 
 /// Representation of a terminal user interface.
 ///
@@ -50,7 +51,7 @@ impl<B: Backend> Tui<B> {
     ///
     /// [`Draw`]: ratatui::Terminal::draw
     /// [`rendering`]: crate::ui:render
-    pub fn draw(&mut self, app: &mut App) -> AppResult<()> {
+    pub fn draw(&mut self, app: &mut App, text_area: &mut TextArea) -> AppResult<()> {
         self.terminal.draw(|frame| ui::render(app, frame))?;
         Ok(())
     }

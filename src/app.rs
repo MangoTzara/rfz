@@ -1,17 +1,18 @@
-use std::{env, error};
+use std::{env, error, ops::Add};
+use tui_textarea::TextArea;
 
-use ratatui::widgets::ListState;
+use ratatui::{text::Span, widgets::ListState};
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Application.
 #[derive(Debug)]
 pub struct App {
-    /// counter
     /// Is the application running?
     pub running: bool,
     pub paths: Vec<String>,
     pub list_state: ListState,
+    pub query: String,
 }
 impl Default for App {
     fn default() -> Self {
@@ -26,6 +27,7 @@ impl Default for App {
                 })
                 .collect(),
             list_state: ListState::default(),
+            query: String::new(),
         }
     }
 }
@@ -44,6 +46,7 @@ impl App {
                 })
                 .collect(),
             list_state: ListState::default(),
+            query: String::new(),
         }
     }
 
@@ -57,11 +60,22 @@ impl App {
 
     pub fn increment_counter(&mut self) {
         self.list_state
-            .select(Some(self.list_state.selected().unwrap_or(0) + 1));
+            .select(self.list_state.selected().unwrap_or(1).checked_sub(1));
     }
 
     pub fn decrement_counter(&mut self) {
         self.list_state
-            .select(Some(self.list_state.selected().unwrap_or(0) + 1));
+            .select(self.list_state.selected().unwrap_or(0).checked_add(1));
+    }
+
+    pub fn update_query(&mut self, query: char) {
+        self.query.push(query);
+    }
+
+    pub(crate) fn delete(&mut self) {
+        match self.query.pop() {
+            Some(_) => {}
+            None => {}
+        };
     }
 }
