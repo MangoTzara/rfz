@@ -1,0 +1,20 @@
+[package]
+name = "rzf-async"
+version = "0.1.0"
+authors = ["fede <fedemarc24@gmail.com>"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+crossterm = { version = "0.27.0", features = ["event-stream"] }
+futures = "0.3.30"
+tokio = { version = "1.35.1", features = ["full"] }
+brunch = "0.5.0"
+fuzzy-matcher = "0.3.7"
+walkdir = "2"
+ratatui = "0.26.1"
+tui-textarea = "0.4.0"
+nucleo-matcher = "0.3.0"
+nucleo = "0.3.0"
+rayon = "1.8.1"
+mini-moka = "0.10.3"
