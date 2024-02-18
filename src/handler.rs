@@ -7,7 +7,6 @@ use crossterm::{
     style::Stylize,
 };
 use ratatui::widgets::{Block, Borders};
-use tui_textarea::{Input, Key, TextArea};
 
 /// Handles the key events and updates the state of [`App`].
 pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {

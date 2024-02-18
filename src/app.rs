@@ -1,8 +1,7 @@
 use nucleo::{Config, Nucleo, Utf32String};
-use std::{env, error, ops::Add, sync::Arc};
-use tui_textarea::TextArea;
+use std::{error, sync::Arc};
 
-use ratatui::{text::Span, widgets::ListState};
+use ratatui::widgets::ListState;
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -10,37 +9,41 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    pub paths: Vec<String>,
     pub list_state: ListState,
     pub query: String,
+    top: u32,
     matcher: Nucleo<String>,
+    path: String,
 }
 
 impl App {
     /// Constructs a new instance of [`App`].
     pub fn new(path: String) -> Self {
         Self {
+            path,
             running: true,
-            paths: walkdir::WalkDir::new(path)
-                .into_iter()
-                .filter_map(|path| {
-                    let dent = path.ok()?;
-                    let path = dent.into_path().to_string_lossy().into_owned();
-                    Some(path)
-                })
-                .collect(),
             list_state: ListState::default(),
             query: String::new(),
-            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 100),
+            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1),
+            top: 1000,
         }
     }
 
     pub fn start(&mut self) {
-        self.paths.clone().into_iter().for_each(|i| {
-            self.matcher.injector().push(i.clone(), |s| {
-                s[0] = Utf32String::Ascii(i.into());
+        jwalk::WalkDir::new(&self.path)
+            .into_iter()
+            .for_each(|path| {
+                match path {
+                    Ok(p) => {
+                        self.matcher
+                            .injector()
+                            .push(p.path().to_string_lossy().to_string(), |s| {
+                                s[0] = Utf32String::Ascii(p.path().to_string_lossy().into());
+                            });
+                    }
+                    Err(_) => {}
+                };
             });
-        });
     }
 
     /// Handles the tick event of the terminal.
@@ -56,11 +59,15 @@ impl App {
     pub fn increment_counter(&mut self) {
         self.list_state
             .select(self.list_state.selected().unwrap_or(1).checked_sub(1));
+        self.top += 1000;
     }
 
     pub fn decrement_counter(&mut self) {
         self.list_state
             .select(self.list_state.selected().unwrap_or(0).checked_add(1));
+        if self.top > 2000 {
+            self.top -= 1000;
+        }
     }
 
     pub fn update_query(&mut self, query: char) {
@@ -72,6 +79,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
+        self.matcher.tick(100);
     }
 
     pub(crate) fn delete(&mut self) {
@@ -86,6 +94,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
+        self.matcher.tick(10);
     }
 
     pub fn injector(&self) -> nucleo::Injector<String> {
@@ -102,5 +111,22 @@ impl App {
 
     pub fn update_config(&mut self, config: Config) {
         self.matcher.update_config(config)
+    }
+
+    pub(crate) fn get_items(&self) -> Vec<String> {
+        let matched_items = match self.snapshot().matched_item_count() < self.top {
+            true => self
+                .snapshot()
+                .matched_items(0..self.snapshot().matched_item_count()),
+            false => self.snapshot().matched_items(0..self.top),
+        };
+        let mut res: Vec<String> = Vec::new();
+        for (i, c) in matched_items.enumerate() {
+            match i > self.top as usize {
+                true => break,
+                false => res.push(c.data.clone()),
+            }
+        }
+        res
     }
 }
