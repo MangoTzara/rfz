@@ -1,6 +1,5 @@
 use nucleo::{Config, Nucleo, Utf32String};
 use std::{env, error, ops::Add, sync::Arc};
-use tui_textarea::TextArea;
 
 use ratatui::{text::Span, widgets::ListState};
 /// Application result type.
@@ -10,37 +9,42 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    pub paths: Vec<String>,
     pub list_state: ListState,
     pub query: String,
     matcher: Nucleo<String>,
+    path: String,
 }
 
 impl App {
     /// Constructs a new instance of [`App`].
     pub fn new(path: String) -> Self {
         Self {
+            path,
             running: true,
-            paths: walkdir::WalkDir::new(path)
-                .into_iter()
-                .filter_map(|path| {
-                    let dent = path.ok()?;
-                    let path = dent.into_path().to_string_lossy().into_owned();
-                    Some(path)
-                })
-                .collect(),
             list_state: ListState::default(),
             query: String::new(),
-            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 100),
+            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1),
         }
     }
 
     pub fn start(&mut self) {
-        self.paths.clone().into_iter().for_each(|i| {
-            self.matcher.injector().push(i.clone(), |s| {
-                s[0] = Utf32String::Ascii(i.into());
+        walkdir::WalkDir::new(&self.path)
+            .into_iter()
+            .for_each(|path| {
+                match path {
+                    Ok(p) => {
+                        self.matcher.injector().push(
+                            p.clone().into_path().to_string_lossy().into_owned(),
+                            |s| {
+                                s[0] = Utf32String::Ascii(
+                                    p.into_path().to_string_lossy().into_owned().into(),
+                                );
+                            },
+                        );
+                    }
+                    Err(_) => {}
+                };
             });
-        });
     }
 
     /// Handles the tick event of the terminal.
@@ -72,6 +76,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
+        self.matcher.tick(10);
     }
 
     pub(crate) fn delete(&mut self) {
@@ -86,6 +91,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
+        self.matcher.tick(10);
     }
 
     pub fn injector(&self) -> nucleo::Injector<String> {

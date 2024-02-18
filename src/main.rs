@@ -6,8 +6,6 @@ use rzf_async::event::{Event, EventHandler};
 use rzf_async::handler::handle_key_events;
 use rzf_async::tui::Tui;
 use std::{env, io};
-use tui_textarea::{Input, Key, TextArea};
-
 #[tokio::main]
 async fn main() -> AppResult<()> {
     let path = match env::args().nth(1) {
@@ -37,6 +35,7 @@ async fn main() -> AppResult<()> {
             Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
+            Event::Paste(c) => c.chars().for_each(|c| app.update_query(c)),
         }
     }
 

@@ -1,5 +1,6 @@
 use std::{borrow::Cow, time::Duration};
 
+use crate::event::Event::Paste;
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc;
@@ -7,7 +8,7 @@ use tokio::sync::mpsc;
 use crate::app::AppResult;
 
 /// Terminal events.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum Event {
     /// Terminal tick.
     Tick,
@@ -17,6 +18,7 @@ pub enum Event {
     Mouse(MouseEvent),
     /// Terminal resize.
     Resize(u16, u16),
+    Paste(String),
 }
 
 /// Terminal event handler.
@@ -65,7 +67,8 @@ impl EventHandler {
                       },
                       CrosstermEvent::FocusGained => {
                       },
-                      CrosstermEvent::Paste(_) => {
+                      CrosstermEvent::Paste(c) => {
+                          _sender.send(Event::Paste(c)).unwrap();
                       },
 
                     }
