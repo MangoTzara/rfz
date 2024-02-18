@@ -1,7 +1,7 @@
 use nucleo::{Config, Nucleo, Utf32String};
-use std::{env, error, ops::Add, sync::Arc};
+use std::{error, sync::Arc};
 
-use ratatui::{text::Span, widgets::ListState};
+use ratatui::widgets::ListState;
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -28,19 +28,16 @@ impl App {
     }
 
     pub fn start(&mut self) {
-        walkdir::WalkDir::new(&self.path)
+        jwalk::WalkDir::new(&self.path)
             .into_iter()
             .for_each(|path| {
                 match path {
                     Ok(p) => {
-                        self.matcher.injector().push(
-                            p.clone().into_path().to_string_lossy().into_owned(),
-                            |s| {
-                                s[0] = Utf32String::Ascii(
-                                    p.into_path().to_string_lossy().into_owned().into(),
-                                );
-                            },
-                        );
+                        self.matcher
+                            .injector()
+                            .push(p.path().to_string_lossy().to_string(), |s| {
+                                s[0] = Utf32String::Ascii(p.path().to_string_lossy().into());
+                            });
                     }
                     Err(_) => {}
                 };
