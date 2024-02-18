@@ -23,14 +23,13 @@ async fn main() -> AppResult<()> {
     let events = EventHandler::new(250);
     let mut tui = Tui::new(terminal, events);
 
-    let mut text_area = TextArea::default();
-    text_area.set_block(Block::default().borders(Borders::ALL).title(">"));
+    app.start();
     tui.init()?;
 
     // Start the main loop.
     while app.running {
         // Render the user interface.
-        tui.draw(&mut app, &mut text_area)?;
+        tui.draw(&mut app)?;
 
         // Handle events.
         match tui.events.next().await? {
@@ -43,5 +42,15 @@ async fn main() -> AppResult<()> {
 
     // Exit the user interface.
     tui.exit()?;
+    match app.list_state.selected() {
+        Some(i) => println!(
+            "{}",
+            app.snapshot()
+                .get_matched_item(i.try_into().unwrap())
+                .unwrap()
+                .data
+        ),
+        None => {}
+    }
     Ok(())
 }
