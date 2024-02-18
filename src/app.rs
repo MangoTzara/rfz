@@ -11,6 +11,7 @@ pub struct App {
     pub running: bool,
     pub list_state: ListState,
     pub query: String,
+    top: u32,
     matcher: Nucleo<String>,
     path: String,
 }
@@ -24,6 +25,7 @@ impl App {
             list_state: ListState::default(),
             query: String::new(),
             matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1),
+            top: 1000,
         }
     }
 
@@ -57,11 +59,15 @@ impl App {
     pub fn increment_counter(&mut self) {
         self.list_state
             .select(self.list_state.selected().unwrap_or(1).checked_sub(1));
+        self.top += 1000;
     }
 
     pub fn decrement_counter(&mut self) {
         self.list_state
             .select(self.list_state.selected().unwrap_or(0).checked_add(1));
+        if self.top > 2000 {
+            self.top -= 1000;
+        }
     }
 
     pub fn update_query(&mut self, query: char) {
@@ -73,7 +79,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
-        self.matcher.tick(10);
+        self.matcher.tick(100);
     }
 
     pub(crate) fn delete(&mut self) {
@@ -105,5 +111,22 @@ impl App {
 
     pub fn update_config(&mut self, config: Config) {
         self.matcher.update_config(config)
+    }
+
+    pub(crate) fn get_items(&self) -> Vec<String> {
+        let matched_items = match self.snapshot().matched_item_count() < self.top {
+            true => self
+                .snapshot()
+                .matched_items(0..self.snapshot().matched_item_count()),
+            false => self.snapshot().matched_items(0..self.top),
+        };
+        let mut res: Vec<String> = Vec::new();
+        for (i, c) in matched_items.enumerate() {
+            match i > self.top as usize {
+                true => break,
+                false => res.push(c.data.clone()),
+            }
+        }
+        res
     }
 }
