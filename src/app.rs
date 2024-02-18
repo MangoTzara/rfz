@@ -31,7 +31,7 @@ impl App {
                 .collect(),
             list_state: ListState::default(),
             query: String::new(),
-            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(8), 100),
+            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 100),
         }
     }
 
@@ -45,7 +45,7 @@ impl App {
 
     /// Handles the tick event of the terminal.
     pub fn tick(&mut self) {
-        self.matcher.tick(100);
+        self.matcher.tick(10);
     }
 
     /// Set running to false to quit the application.
