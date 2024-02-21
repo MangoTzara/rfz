@@ -1,7 +1,7 @@
-use nucleo::{Config, Nucleo, Utf32String};
-use std::{error, sync::Arc};
-
+use indexmap::map::IndexMap;
+use nucleo::{Config, Matcher, Nucleo, Utf32String};
 use ratatui::widgets::ListState;
+use std::{error, sync::Arc};
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -13,37 +13,28 @@ pub struct App {
     pub query: String,
     top: u32,
     matcher: Nucleo<String>,
-    path: String,
 }
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(path: String) -> Self {
+    pub fn new(path: Vec<String>) -> Self {
+        let mut matcher: Nucleo<String> = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1);
+
+        path.iter().for_each(|c| {
+            matcher.injector().push(c.clone(), |s| {
+                s[0] = Utf32String::Ascii(c.to_string().into());
+            });
+        });
+
+        matcher.tick(10);
+
         Self {
-            path,
             running: true,
-            list_state: ListState::default(),
+            list_state: ListState::default().with_offset(1),
             query: String::new(),
-            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1),
+            matcher,
             top: 1000,
         }
-    }
-
-    pub fn start(&mut self) {
-        jwalk::WalkDir::new(&self.path)
-            .into_iter()
-            .for_each(|path| {
-                match path {
-                    Ok(p) => {
-                        self.matcher
-                            .injector()
-                            .push(p.path().to_string_lossy().to_string(), |s| {
-                                s[0] = Utf32String::Ascii(p.path().to_string_lossy().into());
-                            });
-                    }
-                    Err(_) => {}
-                };
-            });
     }
 
     /// Handles the tick event of the terminal.
@@ -79,7 +70,7 @@ impl App {
             nucleo::pattern::Normalization::Never,
             true,
         );
-        self.matcher.tick(100);
+        self.matcher.tick(10);
     }
 
     pub(crate) fn delete(&mut self) {
@@ -113,7 +104,7 @@ impl App {
         self.matcher.update_config(config)
     }
 
-    pub(crate) fn get_items(&self) -> Vec<String> {
+    pub fn get_items(&self) -> Vec<String> {
         let matched_items = match self.snapshot().matched_item_count() < self.top {
             true => self
                 .snapshot()
@@ -128,5 +119,85 @@ impl App {
             }
         }
         res
+    }
+
+    pub fn get_items_with_indices(&mut self) -> IndexMap<String, Vec<u32>> {
+        let mut indexmap: IndexMap<String, Vec<u32>> = IndexMap::new();
+
+        let mut matcher = Matcher::new(Config::DEFAULT);
+        let matched_items = match self.snapshot().matched_item_count() < self.top {
+            true => self
+                .snapshot()
+                .matched_items(0..self.snapshot().matched_item_count()),
+            false => self.snapshot().matched_items(0..self.top),
+        };
+        for (i, c) in matched_items.enumerate() {
+            if i > self.top as usize {
+                break;
+            }
+            let mut indices: Vec<u32> = Vec::new();
+            self.snapshot().pattern().column_pattern(0).indices(
+                c.matcher_columns[0].slice(..),
+                &mut matcher,
+                &mut indices,
+            );
+            indices.sort_unstable();
+            indices.dedup();
+            indexmap.insert(c.data.to_string(), indices);
+        }
+        // self.snapshot().matched_items(0..self.top).for_each(|item| {
+        //     let mut indices: Vec<u32> = Vec::new();
+        //     self.snapshot().pattern().column_pattern(0).indices(
+        //         item.matcher_columns[0].slice(..),
+        //         &mut matcher,
+        //         &mut indices,
+        //     );
+        //     indices.sort_unstable();
+        //     indices.dedup();
+        //     indexmap.insert(item.data.to_string(), indices);
+        // });
+        indexmap
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::App;
+
+    #[test]
+    fn get_items_no_search() {
+        let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
+        let sut: App = App::new(path.clone());
+        sut.get_items()
+            .iter()
+            .for_each(|c| assert!(path.contains(&c)));
+    }
+
+    #[test]
+    fn get_items_search_search() {
+        let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
+        let mut sut: App = App::new(path.clone());
+        sut.update_query('l');
+        assert!(sut.get_items().is_empty());
+    }
+
+    #[test]
+    fn get_indices() {
+        let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
+        let mut sut: App = App::new(path.clone());
+        sut.update_query('a');
+        sut.update_query('s');
+        let res = sut.get_items_with_indices();
+        let vec: Vec<u32> = vec![0, 1];
+        assert_eq!(res.get(&"asd".to_string()).unwrap(), &vec);
+    }
+    #[test]
+    fn empty_search_indices() {
+        let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
+        let mut sut: App = App::new(path.clone());
+        let res = sut.get_items_with_indices();
+        let vec: Vec<u32> = Vec::new();
+        assert_eq!(res.keys().map(|c| c.to_string()).collect::<Vec<_>>(), path);
+        assert_eq!(res.get(&"asd".to_string()).unwrap(), &vec);
     }
 }
