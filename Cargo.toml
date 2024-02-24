@@ -1,5 +1,5 @@
 [package]
-name = "rzf-async"
+name = "rfz"
 version = "0.1.0"
 authors = ["fede <fedemarc24@gmail.com>"]
 license = "MIT"
@@ -17,3 +17,4 @@ rayon = "1.8.1"
 mini-moka = "0.10.3"
 tokio-stream = "0.1.14"
 jwalk = "0.8.1"
+indexmap = "2.2.3"
