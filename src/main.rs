@@ -1,11 +1,11 @@
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use rzf_async::app::{App, AppResult};
-use rzf_async::event::{Event, EventHandler};
-use rzf_async::handler::handle_key_events;
-use rzf_async::tui::Tui;
+use rfz::app::{App, AppResult};
+use rfz::event::{Event, EventHandler};
+use rfz::handler::handle_key_events;
+use rfz::tui::Tui;
 
-use std::io::BufRead;
+use std::io::{BufRead, IsTerminal};
 use std::{env, io};
 
 fn get_os_path() -> Vec<String> {
@@ -36,16 +36,17 @@ fn get_os_path() -> Vec<String> {
 
 #[tokio::main]
 async fn main() -> AppResult<()> {
-    let mut path: Vec<String> = io::stdin()
-        .lock()
-        .lines()
-        .filter_map(|c| match c {
-            Ok(string) => Some(string),
-            Err(_) => None,
-        })
-        .collect::<Vec<String>>();
-    if path.is_empty() {
+    let mut path: Vec<String> = Vec::new();
+    let input = io::stdin();
+    if input.is_terminal() {
+        // no input available
         path = get_os_path();
+    } else {
+        // input available
+        input.lock().lines().for_each(|c| match c {
+            Ok(c) => path.push(c),
+            Err(_) => {}
+        });
     }
     // Create an application.
     let mut app = App::new(path);
@@ -56,13 +57,11 @@ async fn main() -> AppResult<()> {
     let events = EventHandler::new(250);
     let mut tui = Tui::new(terminal, events);
 
-    // app.start();
     tui.init()?;
     // Start the main loop.
     while app.running {
         // Render the user interface.
         tui.draw(&mut app)?;
-
         // Handle events.
         match tui.events.next().await? {
             Event::Tick => app.tick(),

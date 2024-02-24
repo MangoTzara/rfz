@@ -1,5 +1,5 @@
 [package]
-name = "rzf-async"
+name = "rfz"
 version = "0.1.0"
 authors = ["fede <fedemarc24@gmail.com>"]
 license = "MIT"
