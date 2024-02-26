@@ -30,7 +30,7 @@ impl App {
 
         Self {
             running: true,
-            list_state: ListState::default().with_offset(1),
+            list_state: ListState::default().with_selected(Some(0)),
             query: String::new(),
             matcher,
             top: 1000,
@@ -48,17 +48,20 @@ impl App {
     }
 
     pub fn increment_counter(&mut self) {
-        self.list_state
-            .select(self.list_state.selected().unwrap_or(1).checked_sub(1));
-        self.top += 1000;
+        match self.list_state.selected() {
+            Some(c) => {
+                self.list_state.select(Some(c + 1));
+                if c + 100 > self.top as usize {
+                    self.top += 100;
+                }
+            }
+            None => self.list_state.select(Some(0)),
+        };
     }
 
     pub fn decrement_counter(&mut self) {
         self.list_state
-            .select(self.list_state.selected().unwrap_or(0).checked_add(1));
-        if self.top > 2000 {
-            self.top -= 1000;
-        }
+            .select(self.list_state.selected().unwrap_or(0).checked_sub(1));
     }
 
     pub fn update_query(&mut self, query: char) {
@@ -71,6 +74,7 @@ impl App {
             true,
         );
         self.matcher.tick(10);
+        self.list_state.select(Some(0));
     }
 
     pub(crate) fn delete(&mut self) {
@@ -86,6 +90,7 @@ impl App {
             true,
         );
         self.matcher.tick(10);
+        self.list_state.select(Some(0));
     }
 
     pub fn injector(&self) -> nucleo::Injector<String> {
@@ -145,23 +150,16 @@ impl App {
             indices.dedup();
             indexmap.insert(c.data.to_string(), indices);
         }
-        // self.snapshot().matched_items(0..self.top).for_each(|item| {
-        //     let mut indices: Vec<u32> = Vec::new();
-        //     self.snapshot().pattern().column_pattern(0).indices(
-        //         item.matcher_columns[0].slice(..),
-        //         &mut matcher,
-        //         &mut indices,
-        //     );
-        //     indices.sort_unstable();
-        //     indices.dedup();
-        //     indexmap.insert(item.data.to_string(), indices);
-        // });
         indexmap
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use nucleo::{Config, Nucleo, Utf32String};
+
     use super::App;
 
     #[test]
@@ -199,5 +197,22 @@ mod tests {
         let vec: Vec<u32> = Vec::new();
         assert_eq!(res.keys().map(|c| c.to_string()).collect::<Vec<_>>(), path);
         assert_eq!(res.get(&"asd".to_string()).unwrap(), &vec);
+    }
+
+    #[test]
+    fn no_match() {
+        let path = vec!["asd".to_string(), "dqaasd".to_string(), "adq".to_string()];
+
+        let mut matcher: Nucleo<String> = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 2);
+
+        path.iter().for_each(|c| {
+            matcher.injector().push(c.clone(), |s| {
+                s[0] = Utf32String::Ascii(c.to_string().into());
+            });
+        });
+
+        matcher.tick(10);
+        println!("{:?}", matcher.snapshot().matched_item_count());
+        assert!(false);
     }
 }
