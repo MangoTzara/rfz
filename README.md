@@ -1,5 +1,5 @@
 # rfz
-Kinda fzf but in Rust using the Nucleo crate
+Kinda fzf but in Rust using the [Nucleo](https://github.com/helix-editor/nucleo) crate
 
 This use simple async [ratatui](https://ratatui.rs/) template:
 
