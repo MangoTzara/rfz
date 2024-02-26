@@ -182,3 +182,5 @@ diff -bur ./simple/src/main.rs ./simple-async/src/main.rs
              Event::Mouse(_) => {}
 
 ```
+# rfz
+Kinda fzf but in Rust using the Nucleo crate
