@@ -43,7 +43,10 @@ impl App {
     }
 
     /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
+    pub fn quit(&mut self, esc: bool) {
+        if esc {
+            self.list_state.select(None);
+        }
         self.running = false;
     }
 

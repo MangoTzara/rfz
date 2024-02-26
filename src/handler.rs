@@ -6,7 +6,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
     match key_event.code {
         // Exit application on `ESC`
         KeyCode::Esc => {
-            app.quit();
+            app.quit(true);
         }
         // Counter handlers
         KeyCode::Up => {
@@ -16,7 +16,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             app.increment_counter();
         }
         KeyCode::Enter => {
-            app.quit();
+            app.quit(false);
         }
         KeyCode::Backspace => app.delete(),
         KeyCode::Char(c) => {
