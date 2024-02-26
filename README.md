@@ -1,7 +1,7 @@
 # rfz
 Kinda fzf but in Rust using the Nucleo crate
 
-This use simple async [https://ratatui.rs/] template:
+This use simple async [ratatui](https://ratatui.rs/) template:
 
 ```text
 src/
