@@ -1,6 +1,10 @@
 ## Simple Async template
 
+<<<<<<< Updated upstream
 This simple async template will create the following project structure:
+=======
+This use simple async [ratatui](https://ratatui.rs/) template:
+>>>>>>> Stashed changes
 
 ```text
 src/
