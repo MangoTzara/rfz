@@ -1,6 +1,7 @@
 use indexmap::map::IndexMap;
 use nucleo::{Config, Matcher, Nucleo, Utf32String};
 use ratatui::widgets::ListState;
+use std::thread::available_parallelism;
 use std::{error, sync::Arc};
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -18,7 +19,12 @@ pub struct App {
 impl App {
     /// Constructs a new instance of [`App`].
     pub fn new(path: Vec<String>) -> Self {
-        let mut matcher: Nucleo<String> = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 1);
+        let mut matcher: Nucleo<String> = Nucleo::new(
+            Config::DEFAULT,
+            Arc::new(|| {}),
+            Some(available_parallelism().unwrap().get()),
+            1,
+        );
 
         path.iter().for_each(|c| {
             matcher.injector().push(c.clone(), |s| {
@@ -43,7 +49,11 @@ impl App {
     }
 
     /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
+    /// * `esc` - Boolean representing if the application exit shouldn't print the selected value
+    pub fn quit(&mut self, esc: bool) {
+        if esc {
+            self.list_state.select(None);
+        }
         self.running = false;
     }
 
@@ -66,15 +76,19 @@ impl App {
 
     pub fn update_query(&mut self, query: char) {
         self.query.push(query);
+        self.reparse();
+        self.matcher.tick(10);
+        self.list_state.select(Some(0));
+    }
+
+    fn reparse(&mut self) {
         self.matcher.pattern.reparse(
             0,
             self.query.as_str(),
             nucleo::pattern::CaseMatching::Ignore,
             nucleo::pattern::Normalization::Never,
-            true,
+            false,
         );
-        self.matcher.tick(10);
-        self.list_state.select(Some(0));
     }
 
     pub(crate) fn delete(&mut self) {
@@ -82,13 +96,7 @@ impl App {
             Some(_) => {}
             None => {}
         };
-        self.matcher.pattern.reparse(
-            0,
-            self.query.as_str(),
-            nucleo::pattern::CaseMatching::Ignore,
-            nucleo::pattern::Normalization::Never,
-            true,
-        );
+        self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));
     }
@@ -197,22 +205,5 @@ mod tests {
         let vec: Vec<u32> = Vec::new();
         assert_eq!(res.keys().map(|c| c.to_string()).collect::<Vec<_>>(), path);
         assert_eq!(res.get(&"asd".to_string()).unwrap(), &vec);
-    }
-
-    #[test]
-    fn no_match() {
-        let path = vec!["asd".to_string(), "dqaasd".to_string(), "adq".to_string()];
-
-        let mut matcher: Nucleo<String> = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), Some(4), 2);
-
-        path.iter().for_each(|c| {
-            matcher.injector().push(c.clone(), |s| {
-                s[0] = Utf32String::Ascii(c.to_string().into());
-            });
-        });
-
-        matcher.tick(10);
-        println!("{:?}", matcher.snapshot().matched_item_count());
-        assert!(false);
     }
 }
