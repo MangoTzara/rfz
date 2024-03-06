@@ -1,6 +1,6 @@
-use std::{borrow::Cow, time::Duration};
+use std::{time::Duration};
 
-use crate::event::Event::Paste;
+
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
 use futures::{FutureExt, StreamExt};
 use tokio::sync::mpsc;

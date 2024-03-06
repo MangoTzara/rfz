@@ -1,5 +1,5 @@
-use crossterm::terminal::SetTitle;
-use crossterm::{Command, ExecutableCommand};
+
+use crossterm::{ExecutableCommand};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use rfz::app::{App, AppResult};
