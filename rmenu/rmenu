@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Create a temporary file
+temp_file=$(mktemp)
+
+# Run the command and write its output to the temporary file
+rfz -w /usr/bin > "$temp_file"
+
+# Read the output command from the temporary file and execute it in the background
+output=$(cat "$temp_file")
+setsid sh -c "$output" >/dev/null 2>&1 < /dev/null &
+
+# Clean up the temporary file
+rm "$temp_file"

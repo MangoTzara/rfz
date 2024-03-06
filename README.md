@@ -1,6 +1,10 @@
 ## Simple Async template
 
+<<<<<<< Updated upstream
 This simple async template will create the following project structure:
+=======
+This use simple async [ratatui](https://ratatui.rs/) template:
+>>>>>>> Stashed changes
 
 ```text
 src/
@@ -184,3 +188,6 @@ diff -bur ./simple/src/main.rs ./simple-async/src/main.rs
 ```
 # rfz
 Kinda fzf but in Rust using the Nucleo crate
+
+# rmenu
+Uses rfz as a [dmenu_run](https://manpages.debian.org/stretch/suckless-tools/dmenu_run.1.en.html) alternative

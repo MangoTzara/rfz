@@ -1,3 +1,5 @@
+use crossterm::terminal::SetTitle;
+use crossterm::{Command, ExecutableCommand};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use rfz::app::{App, AppResult};
@@ -50,10 +52,14 @@ async fn main() -> AppResult<()> {
     }
     // Create an application.
     let mut app = App::new(path);
-
+    
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
-    let terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(backend)?;
+    terminal
+        .backend_mut()
+        .execute(crossterm::terminal::SetTitle("rfz"))
+        .expect("Couldn't change title");
     let events = EventHandler::new(250);
     let mut tui = Tui::new(terminal, events);
 
