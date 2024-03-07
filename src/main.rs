@@ -1,58 +1,80 @@
-
-use crossterm::{ExecutableCommand};
+use clap::{arg, command};
+use crossterm::ExecutableCommand;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use rfz::app::{App, AppResult};
 use rfz::event::{Event, EventHandler};
 use rfz::handler::handle_key_events;
 use rfz::tui::Tui;
-
+use std::fs::FileType;
 use std::io::{BufRead, IsTerminal};
+use std::path::Path;
+use std::process;
 use std::{env, io};
+use tokio::main;
 
-fn get_os_path() -> Vec<String> {
-    match env::args().count() {
-        1 => jwalk::WalkDir::new(env::current_dir().unwrap())
-            .into_iter()
-            .filter_map(|path| match path {
-                Ok(p) => Some(p.path().to_string_lossy().to_string()),
-                Err(_) => None,
-            })
-            .collect(),
-        _ => {
-            let args: Vec<String> = env::args().collect();
-            if args.contains(&"-w".to_string()) {
-                jwalk::WalkDir::new(&args[2])
-                    .into_iter()
-                    .filter_map(|path| match path {
-                        Ok(p) => Some(p.path().to_string_lossy().to_string()),
-                        Err(_) => None,
-                    })
-                    .collect()
-            } else {
-                args.into_iter().skip(1).collect()
-            }
-        }
+fn get_os_path() -> Option<Vec<String>> {
+    let mut args = command!().args([
+        arg!(--file <PATH>)
+            .short('f')
+            .help("Search files from the given PATH")
+            .exclusive(true),
+        arg!(--directory <PATH>)
+            .short('d')
+            .help("Search directories from the given PATH ")
+            .exclusive(true),
+        arg!(--"working-dir" <PATH>)
+            .short('w')
+            .help("Search  directories and files from the given PATH ")
+            .exclusive(true),
+    ]);
+    let matches = &args.clone().get_matches();
+    if let Some(file) = matches.get_one::<String>("file") {
+        return Some(crawl_directory(file, |entry: FileType| entry.is_file()));
     }
+
+    if let Some(directory) = matches.get_one::<String>("directory") {
+        return Some(crawl_directory(directory, |entry: FileType| entry.is_dir()));
+    }
+
+    if let Some(working_dir) = matches.get_one::<String>("working-dir") {
+        return Some(crawl_directory(working_dir, |_: FileType| true));
+    }
+    args.print_help().ok();
+    None
 }
 
-#[tokio::main]
+fn crawl_directory<P: AsRef<Path>>(path: P, predicate: fn(FileType) -> bool) -> Vec<String> {
+    jwalk::WalkDir::new(path)
+        .into_iter()
+        .filter_map(|path| match path {
+            Ok(p) if predicate(p.file_type) => Some(p.path().to_string_lossy().to_string()),
+            Ok(_) | Err(_) => None,
+        })
+        .collect()
+}
+
+#[main]
 async fn main() -> AppResult<()> {
     let mut path: Vec<String> = Vec::new();
     let input = io::stdin();
     if input.is_terminal() {
         // no input available
-        path = get_os_path();
+        match get_os_path() {
+            Some(p) => path = p,
+            None => process::exit(0),
+        }
     } else {
         // input available
-        input.lock().lines().for_each(|c| match c {
-            Ok(c) => path.push(c),
-            Err(_) => {}
+        input.lock().lines().for_each(|c| {
+            if let Ok(to_push) = c {
+                path.push(to_push)
+            }
         });
     }
     // Create an application.
-    let mut app = App::new(path);
-    
+    let mut app = App::new(path.as_slice());
+
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
     let mut terminal = Terminal::new(backend)?;
@@ -80,15 +102,16 @@ async fn main() -> AppResult<()> {
 
     // Exit the user interface.
     tui.exit()?;
-    match app.list_state.selected() {
-        Some(i) => println!(
+
+    if let Some(selected) = app.list_state.selected() {
+        println!(
             "{}",
             app.snapshot()
-                .get_matched_item(i.try_into().unwrap())
+                .get_matched_item(selected.try_into().unwrap())
                 .unwrap()
                 .data
-        ),
-        None => {}
-    }
+        )
+    };
+
     Ok(())
 }

@@ -16,27 +16,32 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let widget = Paragraph::new(Span::styled(app.query.clone(), Style::new()))
         .block(Block::default().borders(Borders::ALL).title(">"));
     frame.render_widget(widget, chunks[0]);
-
     let binding = app.get_items_with_indices();
     let list: List = binding
         .iter()
-        .map(|(key, value)| {
-            // let mut res = key.clone();
-            // res.push_str(format!("{:?}", value).as_str());
-            // res
-            Line::from(
-                key.char_indices()
-                    .map(|(i, c)| match value.contains(&(i as u32)) {
-                        false => Span::raw(String::from(c)),
-                        true => Span::styled(String::from(c), Style::new().red()),
-                    })
-                    .collect::<Vec<Span>>(),
-            )
-        })
+        .map(|(key, value)| format_line(key, value))
         .collect::<List>()
         .block(Block::default().borders(Borders::ALL))
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
     frame.render_stateful_widget(list, chunks[1], &mut app.list_state);
+}
+
+///Format the span corresponding to a line in the list, highlighting the letters matched
+///
+/// # Arguments
+///
+/// * `key` - The text of the line
+/// * `matched_indices` - The position of the matches
+fn format_line<'a>(line_text: &'a str, matched_indices: &'a [u32]) -> Line<'a> {
+    Line::from(
+        line_text
+            .char_indices()
+            .map(|(i, c)| match matched_indices.contains(&(i as u32)) {
+                false => Span::raw(String::from(c)),
+                true => Span::styled(String::from(c), Style::new().red()),
+            })
+            .collect::<Vec<Span>>(),
+    )
 }
