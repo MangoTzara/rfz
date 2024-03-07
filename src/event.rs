@@ -1,11 +1,8 @@
-use std::{time::Duration};
-
-
+use crate::app::AppResult;
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
 use futures::{FutureExt, StreamExt};
+use std::{process, time::Duration};
 use tokio::sync::mpsc;
-
-use crate::app::AppResult;
 
 /// Terminal events.
 #[derive(Clone, Debug)]
@@ -47,7 +44,10 @@ impl EventHandler {
                 let crossterm_event = reader.next().fuse();
                 tokio::select! {
                   _ = tick_delay => {
-                    _sender.send(Event::Tick).unwrap();
+                    match _sender.send(Event::Tick){
+                            Ok(_) => {},
+                            Err(_) => {process::exit(0)},
+                    };
                   }
 
                   Some(Ok(evt)) = crossterm_event => {
