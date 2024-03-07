@@ -1,4 +1,6 @@
 use indexmap::map::IndexMap;
+use nucleo::pattern::CaseMatching::Ignore;
+use nucleo::pattern::Normalization::Never;
 use nucleo::{Config, Matcher, Nucleo, Utf32String};
 use ratatui::widgets::ListState;
 use std::thread::available_parallelism;
@@ -18,7 +20,7 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(path: Vec<String>) -> Self {
+    pub fn new(path: &[String]) -> Self {
         let mut matcher: Nucleo<String> = Nucleo::new(
             Config::DEFAULT,
             Arc::new(|| {}),
@@ -82,13 +84,9 @@ impl App {
     }
 
     fn reparse(&mut self) {
-        self.matcher.pattern.reparse(
-            0,
-            self.query.as_str(),
-            nucleo::pattern::CaseMatching::Ignore,
-            nucleo::pattern::Normalization::Never,
-            false,
-        );
+        self.matcher
+            .pattern
+            .reparse(0, self.query.as_str(), Ignore, Never, false);
     }
 
     pub(crate) fn delete(&mut self) {
@@ -164,25 +162,22 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use nucleo::{Config, Nucleo, Utf32String};
 
     use super::App;
 
     #[test]
     fn get_items_no_search() {
         let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
-        let sut: App = App::new(path.clone());
+        let sut: App = App::new(&path);
         sut.get_items()
             .iter()
-            .for_each(|c| assert!(path.contains(&c)));
+            .for_each(|c| assert!(path.contains(c)));
     }
 
     #[test]
     fn get_items_search_search() {
         let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
-        let mut sut: App = App::new(path.clone());
+        let mut sut: App = App::new(&path);
         sut.update_query('l');
         assert!(sut.get_items().is_empty());
     }
@@ -190,7 +185,7 @@ mod tests {
     #[test]
     fn get_indices() {
         let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
-        let mut sut: App = App::new(path.clone());
+        let mut sut: App = App::new(&path.clone());
         sut.update_query('a');
         sut.update_query('s');
         let res = sut.get_items_with_indices();
@@ -200,7 +195,7 @@ mod tests {
     #[test]
     fn empty_search_indices() {
         let path = vec!["asd".to_string(), "dqasd".to_string(), "adq".to_string()];
-        let mut sut: App = App::new(path.clone());
+        let mut sut: App = App::new(&path);
         let res = sut.get_items_with_indices();
         let vec: Vec<u32> = Vec::new();
         assert_eq!(res.keys().map(|c| c.to_string()).collect::<Vec<_>>(), path);

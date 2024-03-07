@@ -1,6 +1,6 @@
 [package]
 name = "rfz"
-version = "0.1.0"
+version = "0.0.3"
 authors = ["fede <fedemarc24@gmail.com>"]
 license = "MIT"
 edition = "2021"
@@ -10,11 +10,10 @@ crossterm = { version = "0.27.0", features = ["event-stream"] }
 futures = "0.3.30"
 tokio = { version = "1.35.1", features = ["full"] }
 brunch = "0.5.0"
-fuzzy-matcher = "0.3.7"
 ratatui = "0.26.1"
 nucleo = "0.3.0"
 rayon = "1.8.1"
-mini-moka = "0.10.3"
 tokio-stream = "0.1.14"
 jwalk = "0.8.1"
 indexmap = "2.2.3"
+claps = "0.2.0"
