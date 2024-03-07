@@ -1,5 +1,4 @@
-use std::{time::Duration};
-
+use std::{process, time::Duration};
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
 use futures::{FutureExt, StreamExt};
@@ -47,7 +46,10 @@ impl EventHandler {
                 let crossterm_event = reader.next().fuse();
                 tokio::select! {
                   _ = tick_delay => {
-                    _sender.send(Event::Tick).unwrap();
+                    match _sender.send(Event::Tick){
+                            Ok(_) => {},
+                            Err(_) => {process::exit(0);},
+                    };
                   }
 
                   Some(Ok(evt)) = crossterm_event => {

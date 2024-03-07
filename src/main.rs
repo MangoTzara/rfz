@@ -19,7 +19,7 @@ const HELP: &str = "Usage: rfz [OPTION] [PATH] \n
         -d Search only between directory from the given PATH         \n
         -w Search between both files and directory  from the given PATH \n
     ";
-
+#[inline]
 fn get_os_path() -> Result<Vec<String>, Error> {
     let args: Vec<String> = env::args().collect();
     match args.len() {
@@ -43,11 +43,11 @@ fn get_os_path() -> Result<Vec<String>, Error> {
         _ => input_error("Error"),
     }
 }
-
+#[inline(always)]
 fn input_error<T>(msg: &str) -> Result<T, Error> {
     Err(Error::new(ErrorKind::InvalidInput, msg))
 }
-
+#[inline]
 fn crawl_directory<P: AsRef<Path>>(
     path: P,
     predicate: fn(FileType) -> bool,
@@ -78,13 +78,14 @@ async fn main() -> AppResult<()> {
         }
     } else {
         // input available
-        input.lock().lines().for_each(|c| match c {
-            Ok(c) => path.push(c),
-            Err(_) => {}
+        input.lock().lines().for_each(|c| {
+            if let Ok(to_push) = c {
+                path.push(to_push)
+            }
         });
     }
     // Create an application.
-    let mut app = App::new(&path);
+    let mut app = App::new(path.as_slice());
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -113,15 +114,16 @@ async fn main() -> AppResult<()> {
 
     // Exit the user interface.
     tui.exit()?;
-    match app.list_state.selected() {
-        Some(i) => println!(
+
+    if let Some(selected) = app.list_state.selected() {
+        println!(
             "{}",
             app.snapshot()
-                .get_matched_item(i.try_into().unwrap())
+                .get_matched_item(selected.try_into().unwrap())
                 .unwrap()
                 .data
-        ),
-        None => {}
-    }
+        )
+    };
+
     Ok(())
 }

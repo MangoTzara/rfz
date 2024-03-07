@@ -90,13 +90,11 @@ impl App {
     }
 
     pub(crate) fn delete(&mut self) {
-        match self.query.pop() {
-            Some(_) => {}
-            None => {}
+        if self.query.pop().is_some() {
+            self.reparse();
+            self.matcher.tick(10);
+            self.list_state.select(Some(0));
         };
-        self.reparse();
-        self.matcher.tick(10);
-        self.list_state.select(Some(0));
     }
 
     pub fn injector(&self) -> nucleo::Injector<String> {
