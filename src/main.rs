@@ -17,15 +17,15 @@ fn get_os_path() -> Option<Vec<String>> {
     let mut args = command!().args([
         arg!(--file <PATH>)
             .short('f')
-            .help("Search only between files from the given PATH")
+            .help("Search files from the given PATH")
             .exclusive(true),
         arg!(--directory <PATH>)
             .short('d')
-            .help("Search only between directory from the given PATH ")
+            .help("Search directories from the given PATH ")
             .exclusive(true),
         arg!(--"working-dir" <PATH>)
             .short('w')
-            .help("Search only between directory and files from the given PATH ")
+            .help("Search  directories and files from the given PATH ")
             .exclusive(true),
     ]);
     let matches = &args.clone().get_matches();
