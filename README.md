@@ -3,7 +3,7 @@ Kinda fzf but in Rust using the [Nucleo](https://github.com/helix-editor/nucleo)
 
 ### Why it's better than using fzf?
 Simple Nucleo search faster than fzf.
-When we are talking about his modes uses [jwalk](https://docs.rs/jwalk/latest/jwalk/) to parallelize the search of the possible path and doesn't need to wait ford find.
+When we are talking about his modes uses [jwalk](https://docs.rs/jwalk/latest/jwalk/) to parallelize the search of the possible path and doesn't need to wait for find.
 There is a Stdin mode but it's still a work in progress.
 
 
