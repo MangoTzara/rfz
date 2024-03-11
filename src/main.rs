@@ -46,6 +46,7 @@ fn get_os_path() -> Option<Vec<String>> {
 
 fn crawl_directory<P: AsRef<Path>>(path: P, predicate: fn(FileType) -> bool) -> Vec<String> {
     jwalk::WalkDir::new(path)
+        .skip_hidden(false)
         .into_iter()
         .filter_map(|path| match path {
             Ok(p) if predicate(p.file_type) => Some(p.path().to_string_lossy().to_string()),
