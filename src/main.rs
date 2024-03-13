@@ -1,19 +1,26 @@
+use async_walkdir::WalkDir;
 use clap::{arg, command};
 use crossterm::ExecutableCommand;
+
+use futures_util::{StreamExt, TryStreamExt};
+use nucleo::{Injector, Utf32String};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
+
 use rfz::app::{App, AppResult};
 use rfz::event::{Event, EventHandler};
 use rfz::handler::handle_key_events;
 use rfz::tui::Tui;
+use std::fmt::Error;
 use std::fs::FileType;
 use std::io::{BufRead, IsTerminal};
 use std::path::Path;
 use std::process;
+
 use std::{env, io};
 use tokio::main;
 
-fn get_os_path() -> Option<Vec<String>> {
+fn get_os_path(injector: Injector<String>) -> Result<(), Error> {
     let mut args = command!().args([
         arg!(--file <PATH>)
             .short('f')
@@ -28,53 +35,67 @@ fn get_os_path() -> Option<Vec<String>> {
             .help("Search  directories and files from the given PATH ")
             .exclusive(true),
     ]);
-    let matches = &args.clone().get_matches();
+    let matches = args.clone().get_matches().clone();
     if let Some(file) = matches.get_one::<String>("file") {
-        return Some(crawl_directory(file, |entry: FileType| entry.is_file()));
+        tokio::spawn(crawl_directory(
+            file.clone(),
+            injector,
+            |entry: FileType| entry.is_file(),
+        ));
+        return Ok(());
     }
 
     if let Some(directory) = matches.get_one::<String>("directory") {
-        return Some(crawl_directory(directory, |entry: FileType| entry.is_dir()));
+        tokio::spawn(crawl_directory(
+            directory.clone(),
+            injector,
+            |entry: FileType| entry.is_file(),
+        ));
+        return Ok(());
     }
 
     if let Some(working_dir) = matches.get_one::<String>("working-dir") {
-        return Some(crawl_directory(working_dir, |_: FileType| true));
+        tokio::spawn(crawl_directory(
+            working_dir.clone(),
+            injector,
+            |_: FileType| true,
+        ));
+        return Ok(());
     }
     args.print_help().ok();
-    None
+    Err(std::fmt::Error::default())
 }
 
-fn crawl_directory<P: AsRef<Path>>(path: P, predicate: fn(FileType) -> bool) -> Vec<String> {
-    jwalk::WalkDir::new(path)
-        .skip_hidden(false)
-        .into_iter()
-        .filter_map(|path| match path {
-            Ok(p) if predicate(p.file_type) => Some(p.path().to_string_lossy().to_string()),
-            Ok(_) | Err(_) => None,
-        })
-        .collect()
+async fn crawl_directory<P: AsRef<Path>>(
+    path: P,
+    injector: Injector<String>,
+    predicate: fn(FileType) -> bool,
+) {
+    let entries: WalkDir = async_walkdir::WalkDir::new(path);
+    let mut stream = entries.into_stream();
+    while let Some(item) = stream.next().await {
+        match item {
+            Ok(ok) => {
+                let c = ok.path().to_string_lossy().to_string();
+
+                if predicate(ok.file_type().await.expect("!!!")) {
+                    injector.push(c.clone(), |s| {
+                        s[0] = Utf32String::Ascii(c.to_string().into());
+                    });
+                }
+            }
+            Err(_) => {}
+        }
+    }
 }
 
 #[main]
 async fn main() -> AppResult<()> {
-    let mut path: Vec<String> = Vec::new();
-    let input = io::stdin();
-    if input.is_terminal() {
-        // no input available
-        match get_os_path() {
-            Some(p) => path = p,
-            None => process::exit(0),
-        }
-    } else {
-        // input available
-        input.lock().lines().for_each(|c| {
-            if let Ok(to_push) = c {
-                path.push(to_push)
-            }
-        });
-    }
     // Create an application.
-    let mut app = App::new(path.as_slice());
+    // let mut app = App::new(path.as_slice());
+
+    let mut app = App::default();
+    let injector = app.injector();
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -86,7 +107,22 @@ async fn main() -> AppResult<()> {
     let events = EventHandler::new(250);
     let mut tui = Tui::new(terminal, events);
 
+    let input = io::stdin();
+    if input.is_terminal() {
+        // no input available
+        if let Err(_) = get_os_path(injector) {
+            process::exit(0);
+        }
+    } else {
+        // input available
+        input.lock().lines().for_each(|c| {
+            if let Ok(to_push) = c {
+                app.add_item(to_push)
+            }
+        });
+    }
     tui.init()?;
+
     // Start the main loop.
     while app.running {
         // Render the user interface.
