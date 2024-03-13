@@ -1,10 +1,14 @@
+use futures::future::PollFn;
+
 use indexmap::map::IndexMap;
 use nucleo::pattern::CaseMatching::Ignore;
 use nucleo::pattern::Normalization::Never;
 use nucleo::{Config, Matcher, Nucleo, Utf32String};
 use ratatui::widgets::ListState;
+use std::default;
 use std::thread::available_parallelism;
 use std::{error, sync::Arc};
+
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -19,6 +23,23 @@ pub struct App {
 }
 
 impl App {
+    pub fn default() -> App {
+        let matcher: Nucleo<String> = Nucleo::new(
+            Config::DEFAULT,
+            Arc::new(|| {}),
+            Some(available_parallelism().unwrap().get()),
+            1,
+        );
+
+        Self {
+            running: true,
+            list_state: ListState::default().with_selected(Some(0)),
+            query: String::new(),
+            matcher,
+            top: 1000,
+        }
+    }
+
     /// Constructs a new instance of [`App`].
     pub fn new(path: &[String]) -> Self {
         let mut matcher: Nucleo<String> = Nucleo::new(
@@ -57,6 +78,12 @@ impl App {
             self.list_state.select(None);
         }
         self.running = false;
+    }
+    pub fn get_matched_items(&self) -> u32 {
+        self.snapshot().matched_item_count()
+    }
+    pub fn get_total_items(&self) -> u32 {
+        self.snapshot().item_count()
     }
 
     pub fn increment_counter(&mut self) {
@@ -130,6 +157,12 @@ impl App {
         res
     }
 
+    pub fn add_item(&mut self, to_push: String) {
+        self.injector().push(to_push.clone(), |s| {
+            s[0] = Utf32String::Ascii(to_push.into());
+        });
+    }
+
     pub fn get_items_with_indices(&mut self) -> IndexMap<String, Vec<u32>> {
         let mut indexmap: IndexMap<String, Vec<u32>> = IndexMap::new();
 
@@ -155,6 +188,10 @@ impl App {
             indexmap.insert(c.data.to_string(), indices);
         }
         indexmap
+    }
+
+    pub fn get_query(&self) -> &str {
+        &self.query
     }
 }
 
