@@ -79,6 +79,12 @@ impl App {
         }
         self.running = false;
     }
+    pub fn get_matched_items(&self) -> u32 {
+        self.snapshot().matched_item_count()
+    }
+    pub fn get_total_items(&self) -> u32 {
+        self.snapshot().item_count()
+    }
 
     pub fn increment_counter(&mut self) {
         match self.list_state.selected() {
