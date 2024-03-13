@@ -13,7 +13,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let layout =
         Layout::default().constraints([Constraint::Length(3), Constraint::Min(1)].as_slice());
     let chunks = layout.split(frame.size());
-    let widget = Paragraph::new(Span::styled(app.query.clone(), Style::new()))
+    let widget = Paragraph::new(Span::styled(app.get_query(), Style::new()))
         .block(Block::default().borders(Borders::ALL).title(">"));
     frame.render_widget(widget, chunks[0]);
     let binding = app.get_items_with_indices();
