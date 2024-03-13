@@ -1,4 +1,3 @@
-use async_walkdir::WalkDir;
 use clap::{arg, command};
 use crossterm::ExecutableCommand;
 
@@ -13,7 +12,8 @@ use rfz::handler::handle_key_events;
 use rfz::tui::Tui;
 use std::fmt::Error;
 use std::fs::FileType;
-use std::io::{BufRead, IsTerminal};
+use std::io::{BufRead, IsTerminal, Stdin};
+use std::ops::Deref;
 use std::path::Path;
 use std::process;
 
@@ -49,7 +49,7 @@ fn get_os_path(injector: Injector<String>) -> Result<(), Error> {
         tokio::spawn(crawl_directory(
             directory.clone(),
             injector,
-            |entry: FileType| entry.is_file(),
+            |entry: FileType| entry.is_dir(),
         ));
         return Ok(());
     }
@@ -71,29 +71,35 @@ async fn crawl_directory<P: AsRef<Path>>(
     injector: Injector<String>,
     predicate: fn(FileType) -> bool,
 ) {
-    let entries: WalkDir = async_walkdir::WalkDir::new(path);
-    let mut stream = entries.into_stream();
-    while let Some(item) = stream.next().await {
-        match item {
-            Ok(ok) => {
-                let c = ok.path().to_string_lossy().to_string();
-
-                if predicate(ok.file_type().await.expect("!!!")) {
-                    injector.push(c.clone(), |s| {
-                        s[0] = Utf32String::Ascii(c.to_string().into());
-                    });
-                }
+    jwalk::WalkDir::new(path)
+        .skip_hidden(false)
+        .into_iter()
+        .for_each(|entry| match entry {
+            Ok(p) if predicate(p.file_type) => {
+                let c = p.path().to_string_lossy().to_string();
+                injector.push(c.clone(), |s| {
+                    s[0] = Utf32String::Ascii(c.to_string().into());
+                });
             }
-            Err(_) => {}
-        }
+            Ok(_) | Err(_) => {}
+        })
+}
+
+async fn async_stdin(stdin: Stdin, injector: Injector<String>) {
+    let mut lock = stdin.lock();
+    let mut line = String::new();
+    while lock.read_line(&mut line).expect("!!!") != 0 {
+        injector.push((&line).clone(), |s| {
+            s[0] = Utf32String::Ascii(line.as_str().into());
+        });
+
+        line.clear();
     }
 }
 
 #[main]
 async fn main() -> AppResult<()> {
     // Create an application.
-    // let mut app = App::new(path.as_slice());
-
     let mut app = App::default();
     let injector = app.injector();
 
@@ -115,11 +121,7 @@ async fn main() -> AppResult<()> {
         }
     } else {
         // input available
-        input.lock().lines().for_each(|c| {
-            if let Ok(to_push) = c {
-                app.add_item(to_push)
-            }
-        });
+        tokio::spawn(async_stdin(input, injector));
     }
     tui.init()?;
 
