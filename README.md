@@ -1,16 +1,26 @@
 # rfz
-Kinda fzf but in Rust using the [Nucleo](https://github.com/helix-editor/nucleo) crate
+Kinda fzf but in Rust using the [Nucleo](https://github.com/helix-editor/nucleo) crate and other tomfooleries
 
-### Why it's better than using fzf?
-Simple Nucleo search faster than fzf.
-When we are talking about his modes uses [jwalk](https://docs.rs/jwalk/latest/jwalk/) to parallelize the search of the possible path and doesn't need to wait for find.
-There is a Stdin mode but it's still a work in progress.
+## QA
 
+> Why it's better than using fzf?
 
+Simple, Nucleo is way faster than fzf and skim (at least on my machine, will provide benches as soon as possible).
+> All my homies hate find 
 
+So we use [jwalk](https://docs.rs/jwalk/latest/jwalk/) to parallelize the search of the possible paths and cut the wait time (more time to touch grass)
 
+> Now with 100% of stdin more
 
-### Options:
+We implemented a fast way to get stdin
+
+> Why there isn't "insert stuff here" that fzf/skim/two_percent has?
+
+There are 2 good reason:
+  1) They are actually good developer (we are not) and have years of experience
+  2) K.I.S.S.
+
+## Options:
 
 - `-f, --file <PATH>`: Search files from the given PATH.
 - `-d, --directory <PATH>`: Search directories from the given PATH.
