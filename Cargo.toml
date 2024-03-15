@@ -18,7 +18,6 @@ ratatui = "0.26.1"
 nucleo = "0.3.0"
 rayon = "1.8.1"
 tokio-stream = "0.1.14"
-indexmap = "2.2.3"
 clap = {version = "4.5.2", features = ["cargo"]}
 futures-util = "0.3.30"
 tokio-context = "0.1.3"

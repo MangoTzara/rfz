@@ -1,11 +1,8 @@
 use clap::{arg, command};
 use crossterm::ExecutableCommand;
-
-use futures_util::{StreamExt, TryStreamExt};
 use nucleo::{Injector, Utf32String};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-
 use rfz::app::{App, AppResult};
 use rfz::event::{Event, EventHandler};
 use rfz::handler::handle_key_events;
@@ -13,10 +10,8 @@ use rfz::tui::Tui;
 use std::fmt::Error;
 use std::fs::FileType;
 use std::io::{BufRead, IsTerminal, Stdin};
-use std::ops::Deref;
 use std::path::Path;
 use std::process;
-
 use std::{env, io};
 use tokio::main;
 
@@ -63,7 +58,7 @@ fn get_os_path(injector: Injector<String>) -> Result<(), Error> {
         return Ok(());
     }
     args.print_help().ok();
-    Err(std::fmt::Error::default())
+    Err(std::fmt::Error)
 }
 
 async fn crawl_directory<P: AsRef<Path>>(
@@ -89,7 +84,7 @@ async fn async_stdin(stdin: Stdin, injector: Injector<String>) {
     let mut lock = stdin.lock();
     let mut line = String::new();
     while lock.read_line(&mut line).expect("!!!") != 0 {
-        injector.push((&line).clone(), |s| {
+        injector.push(line.clone(), |s| {
             s[0] = Utf32String::Ascii(line.as_str().into());
         });
 
@@ -110,13 +105,13 @@ async fn main() -> AppResult<()> {
         .backend_mut()
         .execute(crossterm::terminal::SetTitle("rfz"))
         .expect("Couldn't change title");
-    let events = EventHandler::new(250);
+    let events = EventHandler::new(80);
     let mut tui = Tui::new(terminal, events);
 
     let input = io::stdin();
     if input.is_terminal() {
         // no input available
-        if let Err(_) = get_os_path(injector) {
+        if get_os_path(injector).is_err() {
             process::exit(0);
         }
     } else {
