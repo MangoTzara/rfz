@@ -25,7 +25,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
-    frame.render_stateful_widget(list, chunks[1], &mut app.list_state);
+    frame.render_stateful_widget(list, chunks[1], app.get_list_state());
 
     frame.render_widget(
         Span::from(format!(

@@ -1,10 +1,7 @@
-use nucleo::pattern::CaseMatching::Ignore;
-use nucleo::pattern::Normalization::Never;
-use nucleo::{Config, Matcher, Nucleo, Utf32String};
+use crate::search_engine::SearchEngine;
+use nucleo::{Config, Matcher, Utf32String};
 use ratatui::widgets::ListState;
-use std::thread::available_parallelism;
-use std::{error, sync::Arc};
-
+use std::error;
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -12,10 +9,9 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    pub list_state: ListState,
-    pub query: String,
+    list_state: ListState,
     top: u32,
-    matcher: Nucleo<String>,
+    matcher: SearchEngine,
 }
 
 impl Default for App {
@@ -27,18 +23,10 @@ impl Default for App {
 impl App {
     // Constructs a new instance of [`App`].
     pub fn new() -> App {
-        let matcher: Nucleo<String> = Nucleo::new(
-            Config::DEFAULT,
-            Arc::new(|| {}),
-            Some(available_parallelism().unwrap().get()),
-            1,
-        );
-
         Self {
             running: true,
             list_state: ListState::default().with_selected(Some(0)),
-            query: String::new(),
-            matcher,
+            matcher: SearchEngine::default(),
             top: 1000,
         }
     }
@@ -63,6 +51,10 @@ impl App {
         self.snapshot().item_count()
     }
 
+    pub fn get_list_state(&mut self) -> &mut ListState {
+        &mut self.list_state
+    }
+
     pub fn increment_counter(&mut self) {
         match self.list_state.selected() {
             Some(c) => {
@@ -80,21 +72,32 @@ impl App {
             .select(self.list_state.selected().unwrap_or(0).checked_sub(1));
     }
 
+    pub fn selected(&self) -> Option<&String> {
+        match self.list_state.selected() {
+            Some(selected) => Some(
+                self.matcher
+                    .snapshot()
+                    .get_matched_item(selected.try_into().unwrap())
+                    .unwrap()
+                    .data,
+            ),
+            None => None,
+        }
+    }
+
     pub fn update_query(&mut self, query: char) {
-        self.query.push(query);
+        self.matcher.query.push(query);
         self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));
     }
 
     fn reparse(&mut self) {
-        self.matcher
-            .pattern
-            .reparse(0, self.query.as_str(), Ignore, Never, false);
+        self.matcher.reparse()
     }
 
     pub(crate) fn delete(&mut self) {
-        if self.query.pop().is_some() {
+        if self.matcher.query.pop().is_some() {
             self.reparse();
             self.matcher.tick(10);
             self.list_state.select(Some(0));
@@ -105,16 +108,8 @@ impl App {
         self.matcher.injector()
     }
 
-    pub fn restart(&mut self, clear_snapshot: bool) {
-        self.matcher.restart(clear_snapshot)
-    }
-
-    pub fn snapshot(&self) -> &nucleo::Snapshot<String> {
+    fn snapshot(&self) -> &nucleo::Snapshot<String> {
         self.matcher.snapshot()
-    }
-
-    pub fn update_config(&mut self, config: Config) {
-        self.matcher.update_config(config)
     }
 
     pub fn get_items(&self) -> Vec<String> {
@@ -168,6 +163,6 @@ impl App {
     }
 
     pub fn get_query(&self) -> &str {
-        &self.query
+        &self.matcher.query
     }
 }

@@ -137,14 +137,8 @@ async fn main() -> AppResult<()> {
     // Exit the user interface.
     tui.exit()?;
 
-    if let Some(selected) = app.list_state.selected() {
-        println!(
-            "{}",
-            app.snapshot()
-                .get_matched_item(selected.try_into().unwrap())
-                .unwrap()
-                .data
-        )
+    if let Some(selected) = app.selected() {
+        println!("{}", selected)
     };
 
     Ok(())
