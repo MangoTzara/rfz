@@ -1,33 +1,53 @@
 use crate::search_engine::SearchEngine;
 use nucleo::{Config, Matcher, Utf32String};
-use ratatui::widgets::ListState;
+use ratatui::{
+    style::Style,
+    widgets::{ListState, Widget},
+};
 use std::error;
+use tui_textarea::TextArea;
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Application.
-pub struct App {
+pub struct App<'a> {
     /// Is the application running?
     pub running: bool,
     list_state: ListState,
     top: u32,
     matcher: SearchEngine,
+    text_area: TextArea<'a>,
 }
 
-impl Default for App {
+impl<'a> Default for App<'a> {
     fn default() -> Self {
-        Self::new()
+        let mut text_area = TextArea::default();
+
+        text_area.set_style(Style::default());
+
+        Self::new(
+            ListState::default().with_selected(Some(0)),
+            1000,
+            SearchEngine::default(),
+            text_area,
+        )
     }
 }
 
-impl App {
+impl<'a> App<'a> {
     // Constructs a new instance of [`App`].
-    pub fn new() -> App {
+    pub fn new(
+        list_state: ListState,
+        top: u32,
+        matcher: SearchEngine,
+        text_area: TextArea<'a>,
+    ) -> App<'a> {
         Self {
             running: true,
-            list_state: ListState::default().with_selected(Some(0)),
-            matcher: SearchEngine::default(),
-            top: 1000,
+            list_state,
+            top,
+            matcher,
+            text_area,
         }
     }
 
@@ -86,18 +106,23 @@ impl App {
     }
 
     pub fn update_query(&mut self, query: char) {
-        self.matcher.query.push(query);
+        self.text_area.insert_char(query);
         self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));
     }
 
     fn reparse(&mut self) {
-        self.matcher.reparse()
+        let lines = self.text_area.lines();
+        self.matcher.reparse(match lines.len() {
+            1 => &lines[0],
+            0 => "",
+            _ => "",
+        })
     }
 
     pub(crate) fn delete(&mut self) {
-        if self.matcher.query.pop().is_some() {
+        if self.text_area.delete_char() {
             self.reparse();
             self.matcher.tick(10);
             self.list_state.select(Some(0));
@@ -110,23 +135,6 @@ impl App {
 
     fn snapshot(&self) -> &nucleo::Snapshot<String> {
         self.matcher.snapshot()
-    }
-
-    pub fn get_items(&self) -> Vec<String> {
-        let matched_items = match self.snapshot().matched_item_count() < self.top {
-            true => self
-                .snapshot()
-                .matched_items(0..self.snapshot().matched_item_count()),
-            false => self.snapshot().matched_items(0..self.top),
-        };
-        let mut res: Vec<String> = Vec::new();
-        for (i, c) in matched_items.enumerate() {
-            match i > self.top as usize {
-                true => break,
-                false => res.push(c.data.clone()),
-            }
-        }
-        res
     }
 
     pub fn add_item(&mut self, to_push: String) {
@@ -145,10 +153,7 @@ impl App {
                 .matched_items(0..self.snapshot().matched_item_count()),
             false => self.snapshot().matched_items(0..self.top),
         };
-        for (i, c) in matched_items.enumerate() {
-            if i > self.top as usize {
-                break;
-            }
+        for c in matched_items {
             let mut indices: Vec<u32> = Vec::new();
             self.snapshot().pattern().column_pattern(0).indices(
                 c.matcher_columns[0].slice(..),
@@ -162,7 +167,7 @@ impl App {
         vec
     }
 
-    pub fn get_query(&self) -> &str {
-        &self.matcher.query
+    pub(crate) fn get_state_area(&mut self) -> impl Widget + '_ {
+        self.text_area.widget()
     }
 }
