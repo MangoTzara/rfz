@@ -9,19 +9,11 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             app.quit(true);
         }
         // Counter handlers
-        KeyCode::Up => {
-            app.decrement_counter();
-        }
-        KeyCode::Down => {
-            app.increment_counter();
-        }
-        KeyCode::Enter => {
-            app.quit(false);
-        }
+        KeyCode::Up | KeyCode::BackTab => app.decrement_counter(),
+        KeyCode::Down | KeyCode::Tab => app.increment_counter(),
+        KeyCode::Enter => app.quit(false),
         KeyCode::Backspace => app.delete(),
-        KeyCode::Char(c) => {
-            app.update_query(c);
-        }
+        KeyCode::Char(_c) => app.update_query(key_event),
         _ => {}
     }
     Ok(())
