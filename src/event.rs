@@ -44,10 +44,9 @@ impl EventHandler {
                 let crossterm_event = reader.next().fuse();
                 tokio::select! {
                   _ = tick_delay => {
-                    match _sender.send(Event::Tick){
-                            Ok(_) => {},
-                            Err(_) => {process::exit(0)},
-                    };
+                    if _sender.send(Event::Tick).is_err(){
+                            process::exit(0);
+                    }
                   }
 
                   Some(Ok(evt)) = crossterm_event => {

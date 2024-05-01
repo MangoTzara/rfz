@@ -1,8 +1,9 @@
 use crate::search_engine::SearchEngine;
+use crossterm::event::{KeyCode, KeyEvent};
 use nucleo::{Config, Matcher, Utf32String};
 use ratatui::{
     style::Style,
-    widgets::{ListState, Widget},
+    widgets::{Block, Borders, ListState, Widget},
 };
 use std::error;
 use tui_textarea::TextArea;
@@ -24,6 +25,7 @@ impl<'a> Default for App<'a> {
         let mut text_area = TextArea::default();
 
         text_area.set_style(Style::default());
+        text_area.set_block(Block::default().borders(Borders::ALL).title(">"));
 
         Self::new(
             ListState::default().with_selected(Some(0)),
@@ -105,8 +107,15 @@ impl<'a> App<'a> {
         }
     }
 
-    pub fn update_query(&mut self, query: char) {
-        self.text_area.insert_char(query);
+    pub fn paste(&mut self, to_paste: &str) {
+        self.text_area.insert_str(to_paste);
+        self.reparse();
+        self.matcher.tick(10);
+        self.list_state.select(Some(0));
+    }
+
+    pub fn update_query(&mut self, query: KeyEvent) {
+        self.text_area.input(query);
         self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));

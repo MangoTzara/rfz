@@ -130,7 +130,7 @@ async fn main() -> AppResult<()> {
             Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
-            Event::Paste(c) => c.chars().for_each(|c| app.update_query(c)),
+            Event::Paste(c) => app.paste(&c),
         }
     }
 
