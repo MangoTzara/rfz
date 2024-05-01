@@ -1,5 +1,5 @@
 use crate::search_engine::SearchEngine;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use nucleo::{Config, Matcher, Utf32String};
 use ratatui::{
     style::Style,
