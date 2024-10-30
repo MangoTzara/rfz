@@ -1,4 +1,4 @@
-use crate::{app::App, query::Query};
+use crate::app::App;
 use ratatui::{
     layout::{Constraint, Layout},
     style::{Style, Stylize},

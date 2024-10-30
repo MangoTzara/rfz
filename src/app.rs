@@ -167,4 +167,12 @@ impl App {
     pub(crate) fn get_state_area(&mut self) -> impl Widget + '_ {
         &self.text_area
     }
+
+    pub(crate) fn move_left(&mut self, arg: usize) {
+        self.text_area.move_left(arg);
+    }
+
+    pub(crate) fn move_right(&mut self, arg: usize) {
+        self.text_area.move_right(arg);
+    }
 }
