@@ -12,4 +12,5 @@ pub mod tui;
 
 /// Event handler.
 pub mod handler;
+pub mod query;
 pub mod search_engine;
