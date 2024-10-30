@@ -3,9 +3,9 @@ use std::ops::SubAssign;
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Modifier, Style, Stylize},
+    style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Widget, WidgetRef},
+    widgets::{Block, Borders, Paragraph, Widget, WidgetRef},
 };
 
 #[derive(Default)]
@@ -22,7 +22,9 @@ impl WidgetRef for Query {
     #[doc = " to implement a custom widget."]
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let line = self.to_widget();
-        line.render(area, buf);
+        let paragraph =
+            Paragraph::new(line).block(Block::default().title(">").borders(Borders::all()));
+        paragraph.render(area, buf);
     }
 }
 
