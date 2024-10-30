@@ -1,55 +1,45 @@
-use crate::search_engine::SearchEngine;
-use crossterm::event::KeyEvent;
+use crate::{query::Query, search_engine::SearchEngine};
+use crossterm::event::{KeyCode, KeyEvent};
 use nucleo::{Config, Matcher, Utf32String};
 use ratatui::{
     style::Style,
-    widgets::{Block, Borders, ListState, Widget},
+    widgets::{ListState, Widget},
 };
 use std::error;
-use tui_textarea::TextArea;
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Application.
-pub struct App<'a> {
+pub struct App {
     /// Is the application running?
     pub running: bool,
     list_state: ListState,
     top: u32,
     matcher: SearchEngine,
-    text_area: TextArea<'a>,
+    text_area: Query,
 }
 
-impl<'a> Default for App<'a> {
+impl Default for App {
     fn default() -> Self {
-        let mut text_area = TextArea::default();
-
-        text_area.set_style(Style::default());
-        text_area.set_block(Block::default().borders(Borders::ALL).title(">"));
-
-        Self::new(
-            ListState::default().with_selected(Some(0)),
-            1000,
-            SearchEngine::default(),
-            text_area,
-        )
+        Self {
+            list_state: ListState::default().with_selected(Some(0)),
+            top: 1000,
+            text_area: Query::default(),
+            matcher: SearchEngine::default(),
+            running: true,
+        }
     }
 }
 
-impl<'a> App<'a> {
+impl App {
     // Constructs a new instance of [`App`].
-    pub fn new(
-        list_state: ListState,
-        top: u32,
-        matcher: SearchEngine,
-        text_area: TextArea<'a>,
-    ) -> App<'a> {
+    pub fn new(list_state: ListState, top: u32, matcher: SearchEngine, style: Style) -> App {
         Self {
             running: true,
             list_state,
             top,
             matcher,
-            text_area,
+            text_area: Query::new(style),
         }
     }
 
@@ -108,30 +98,28 @@ impl<'a> App<'a> {
     }
 
     pub fn paste(&mut self, to_paste: &str) {
-        self.text_area.insert_str(to_paste);
+        self.text_area.push_str(to_paste);
         self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));
     }
 
     pub fn update_query(&mut self, query: KeyEvent) {
-        self.text_area.input(query);
+        let KeyCode::Char(e) = query.code else {
+            return;
+        };
+        self.text_area.push(e);
         self.reparse();
         self.matcher.tick(10);
         self.list_state.select(Some(0));
     }
 
     fn reparse(&mut self) {
-        let lines = self.text_area.lines();
-        self.matcher.reparse(match lines.len() {
-            1 => &lines[0],
-            0 => "",
-            _ => "",
-        })
+        self.matcher.reparse(self.text_area.text());
     }
 
     pub(crate) fn delete(&mut self) {
-        if self.text_area.delete_char() {
+        if self.text_area.pop() {
             self.reparse();
             self.matcher.tick(10);
             self.list_state.select(Some(0));
@@ -177,6 +165,14 @@ impl<'a> App<'a> {
     }
 
     pub(crate) fn get_state_area(&mut self) -> impl Widget + '_ {
-        self.text_area.widget()
+        &self.text_area
+    }
+
+    pub(crate) fn move_left(&mut self, arg: usize) {
+        self.text_area.move_left(arg);
+    }
+
+    pub(crate) fn move_right(&mut self, arg: usize) {
+        self.text_area.move_right(arg);
     }
 }
